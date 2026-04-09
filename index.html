@@ -147,45 +147,44 @@ document.getElementById("count").innerText = queue.length;
    SYNC TO GOOGLE SHEET
 ========================= */
 
+/* =========================
+   SYNC TO GOOGLE SHEET (Đã sửa để khớp với Code.gs)
+========================= */
+
 async function sync(){
 
-const unsynced = queue.filter(x=>!x.synced);
+  const unsynced = queue.filter(x => !x.synced);
 
-if(!unsynced.length) return;
+  if(!unsynced.length) return;
 
-try{
+  try {
+    show("☁️ Đang sync...");
 
-show("☁️ Đang sync...");
+    const res = await fetch(API_URL, {
+      method: "POST",
+      mode: "no-cors", // Tránh lỗi CORS khi gọi từ GitHub sang Google
+      headers: {
+        "Content-Type": "text/plain" // Apps Script xử lý tốt nhất với text/plain hoặc no-cors
+      },
+      body: JSON.stringify({
+        action: "save",
+        line: "Sản xuất - Line 1", // Tên dây chuyền bạn muốn lưu vào cột 2
+        items: unsynced           // Phải là 'items' để khớp với biến data.items trong Code.gs
+      })
+    });
 
-const res = await fetch(API_URL,{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-action:"save",
-data:unsynced
-})
-});
+    // Lưu ý: Khi dùng mode: "no-cors", chúng ta không đọc được result.status 
+    // nên ta mặc định đánh dấu là đã gửi thành công nếu không có lỗi mạng.
+    queue.forEach(x => x.synced = true);
+    saveLocal();
+    updateCounter();
 
-const result = await res.json();
+    show("✅ Đã gửi dữ liệu");
 
-if(result.status==="success"){
-
-queue.forEach(x=>x.synced=true);
-saveLocal();
-
-show("✅ Sync thành công");
-
-}else{
-show("❌ Sheet từ chối");
-}
-
-}catch(e){
-console.log(e);
-show("📡 Offline");
-}
-
+  } catch (e) {
+    console.log(e);
+    show("📡 Lỗi kết nối");
+  }
 }
 
 /* AUTO SYNC 10s */
