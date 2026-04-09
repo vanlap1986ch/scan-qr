@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8"></script>
+
+<style>
+body{
+  font-family:Arial;
+  text-align:center;
+  background:#f3f4f6;
+}
+
+#qr-reader{
+  width:320px;
+  margin:auto;
+}
+
+button{
+  padding:10px 15px;
+  margin:5px;
+  border:none;
+  background:#111827;
+  color:white;
+  cursor:pointer;
+}
+
+#thongtin{
+  margin-top:15px;
+  text-align:left;
+  width:320px;
+  margin-left:auto;
+  margin-right:auto;
+  background:white;
+  padding:10px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>SCAN QR</h2>
+
+<div id="qr-reader"></div>
+
+<br>
+
+<select id="input-number">
+<option value="">-Chọn-</option>
+<option>A</option>
+<option>B</option>
+<option>C</option>
+</select>
+
+<button onclick="saveData()">LƯU</button>
+
+<div id="thongtin"></div>
+
+<script>
+
+/* ===========================
+   🔴 DÁN URL GAS Ở ĐÂY
+===========================*/
+const GAS_URL =
+"https://script.google.com/macros/s/PASTE_URL_CUA_BAN/exec";
+
+/* =========================== */
+
+const scannedQRs = new Set();
+let scanCount = 0;
+
+function formatTime(){
+  const d=new Date();
+  return d.toLocaleString("vi-VN");
+}
+
+function onScanSuccess(text){
+
+  if(scannedQRs.has(text)) return;
+
+  scannedQRs.add(text);
+  scanCount++;
+
+  const div=document.getElementById("thongtin");
+
+  div.innerHTML += `
+  <div>
+    ${formatTime()} - ${text}
+  </div>`;
+}
+
+const scanner =
+new Html5QrcodeScanner(
+"qr-reader",
+{ fps:10, qrbox:250 }
+);
+
+scanner.render(onScanSuccess);
+
+/* ===========================
+   SAVE TO GAS
+===========================*/
+function saveData(){
+
+  const number =
+    document.getElementById("input-number").value;
+
+  if(scannedQRs.size===0){
+    alert("Chưa có QR");
+    return;
+  }
+
+  const values =
+    Array.from(scannedQRs).map(qr=>({
+      time:formatTime(),
+      qr:qr
+    }));
+
+  fetch(GAS_URL,{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json"
+    },
+    body:JSON.stringify({
+      values:values,
+      number:number
+    })
+  })
+  .then(r=>r.json())
+  .then(()=>{
+      alert("Đã lưu");
+
+      scannedQRs.clear();
+      document.getElementById("thongtin").innerHTML="";
+  });
+}
+
+</script>
+
+</body>
+</html>
