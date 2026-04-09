@@ -7,21 +7,258 @@
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
     <style>
-        /* CSS Cơ bản để giả lập style bạn muốn */
-        body { font-family: 'Poppins', sans-serif; background: #eceff1; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .wrapper { width: 400px; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        .top h1 { font-size: 24px; color: #333; margin-bottom: 20px; }
-        .input-box { position: relative; margin-bottom: 20px; }
-        .input-field { width: 100%; padding: 10px 40px 10px 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        .input-box i { position: absolute; right: 15px; top: 12px; color: #777; }
-        .submit { width: 100%; padding: 10px; background: #111827; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
-        
-        #scan-section { background: #fff; padding: 20px; border-radius: 12px; display: none; width: 95%; max-width: 500px; text-align: center; }
-        #qr-reader { width: 100% !important; border: none !important; }
-        .button { padding: 8px 15px; margin: 5px; border-radius: 5px; border: none; background: #1e293b; color: #fff; cursor: pointer; }
-        #thongtin { text-align: left; margin-top: 15px; max-height: 200px; overflow-y: auto; border: 1px solid #eee; padding: 10px; }
-        .center-alert { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: #fff; padding: 15px 25px; border-radius: 8px; display: none; z-index: 1000; }
-        .form-select, #custom-input { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background: url("https://i.pinimg.com/736x/fe/56/1f/fe561fe1fd0a4cac59ae2629293e36db.jpg");
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    transition: background 0.5s ease; /* Hiệu ứng chuyển cảnh mượt */
+}
+/* Style cho thông báo giữa màn hình */
+.center-alert {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 20px 40px;
+    border-radius: 10px;
+    z-index: 9999; /* Luôn nằm trên cùng */
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translate(-50%, -60%); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+/* 1. Cấu hình Ô nhập liệu (Input Field) */
+.input-field {
+    font-size: 15px;
+    background: rgba(255, 255, 255, 0.2); /* Nền mờ trắng */
+    color: #ffffff; /* Chữ mặc định là trắng khi chưa nhập hoặc placeholder */
+    height: 50px;
+    width: 100%;
+    padding: 0 10px 0 45px;
+    border: 2px solid transparent;
+    border-radius: 30px;
+    outline: none;
+    transition: .3s ease;
+}
+
+/* Khi người dùng click vào hoặc đang gõ chữ */
+.input-field:focus, 
+.input-field:not(:placeholder-shown) {
+    background: #ffffff; /* Nền chuyển sang trắng hoàn toàn để dễ nhìn */
+    color: #003366;      /* CHỮ MÀU XANH ĐẬM khi nhập liệu */
+    border-color: #007bff;
+}
+
+/* Đảm bảo icon bên trong input đổi màu khi nền trắng */
+.input-box:focus-within i {
+    color: #003366;
+}
+
+/* 2. Cấu hình Nút Sign In */
+.submit {
+    font-size: 16px;
+    font-weight: 600;
+    color: white;             /* Chữ nút màu trắng */
+    height: 50px;
+    width: 100%;
+    border: none;
+    border-radius: 50px;      /* BO TRÒN hoàn toàn */
+    outline: none;
+    background: #007bff;      /* NỀN MÀU XANH dương */
+    cursor: pointer;
+    transition: .3s ease-in-out;
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+    margin-top: 10px;
+}
+
+.submit:hover {
+    background: #0056b3;      /* Xanh đậm hơn khi di chuột qua */
+    box-shadow: 0 6px 20px rgba(0, 86, 179, 0.4);
+    transform: translateY(-2px); /* Hiệu ứng nổi nhẹ */
+}
+
+/* Placeholder màu trắng mờ */
+::-webkit-input-placeholder {
+    color: rgba(255, 255, 255, 0.8);
+}
+#qr-reader {
+    width: 100%;
+    max-width: 400px; /* Giới hạn độ rộng vừa phải để dễ quét */
+    margin: 0 auto;   /* Căn giữa trong hàng (row) */
+    border: 4px solid #007bff !important; /* Tạo khung màu xanh nổi bật */
+    border-radius: 15px; /* Bo góc cho mượt mà */
+    overflow: hidden;    /* Đảm bảo camera không tràn khỏi góc bo */
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2); /* Đổ bóng cho hiện đại */
+}
+
+/* Tinh chỉnh hàng chứa QR để đảm bảo căn giữa tuyệt đối */
+.row.mb-3 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+/* LỚP MỚI: Dùng khi đăng nhập thành công */
+body.logged-in {
+    background: #f0f2f5 !important; /* Tắt ảnh nền, dùng màu xám dịu */
+}
+
+/* Container chính bao quanh form login */
+.wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: rgba(0, 0, 0, 0.5); /* Làm tối nền để nổi bật form */
+}
+
+/* Box đăng nhập */
+.form-box {
+    width: 100%;
+    max-width: 450px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(15px);
+    padding: 40px;
+    border-radius: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 20px rgba(0,0,0,0.2);
+}
+
+.top h1 {
+    color: #fff;
+    font-size: 24px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+header {
+    color: #fff;
+    font-size: 30px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+/* Input Fields */
+.input-box {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.input-field {
+    width: 100%;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 25px;
+    padding: 0 20px 0 50px;
+    color: #fff;
+    outline: none;
+}
+
+.input-box i {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #fff;
+}
+
+/* GIAO DIỆN SCAN (Mới và Đẹp) */
+.box {
+    padding: 20px;
+    width: 100%;
+    max-width: 600px;
+    margin: 20px auto;
+    background: #fff;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+#qr-reader {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 2px solid #007bff !important;
+}
+
+/* Hàng chứa các nút và input */
+.row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    width: 100%;
+}
+
+.button {
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+    flex: 1; /* Chia đều chiều rộng */
+}
+
+#scan-count { background: #007bff; flex: 3; }
+#toggle-alert-button { background: #6c757d; flex: 1; }
+#import-button { background: #28a745; }
+#add-button { background: #fd7e14; }
+#delete-button { background: #dc3545; }
+
+/* Bảng danh sách quét */
+#thongtin {
+    width: 100%;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 15px;
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+}
+
+#thongtin div {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+
+#input-number, #custom-input {
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    outline: none;
+}
+
+#input-number { flex: 1; }
+#custom-input { flex: 2; }
+
+
     </style>
 </head>
 <body>
