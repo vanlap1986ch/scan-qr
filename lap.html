@@ -1,140 +1,182 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<script src="https://unpkg.com/html5-qrcode@2.3.8"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <style>
-body{
-  font-family:Arial;
-  text-align:center;
-  background:#f3f4f6;
-}
-
-#qr-reader{
-  width:320px;
-  margin:auto;
-}
-
-button{
-  padding:10px 15px;
-  margin:5px;
-  border:none;
-  background:#111827;
-  color:white;
-  cursor:pointer;
-}
-
-#thongtin{
-  margin-top:15px;
-  text-align:left;
-  width:320px;
-  margin-left:auto;
-  margin-right:auto;
-  background:white;
-  padding:10px;
+body{font-family:Arial;background:#f3f4f6;margin:0}
+#qr-reader{width:320px;margin:auto}
+.box{text-align:center;padding:20px}
+.counter{font-size:22px;font-weight:bold}
+.btn{padding:10px 15px;margin:5px}
+.alert{
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+background:#111827;
+color:#fff;
+padding:15px 25px;
+border-radius:8px;
+display:none;
 }
 </style>
 </head>
 
 <body>
 
-<h2>SCAN QR</h2>
+<div class="box">
+
+<h2>QR SCANNER PRO</h2>
+
+<div class="counter">
+Đã quét: <span id="count">0</span>
+</div>
 
 <div id="qr-reader"></div>
 
 <br>
+<button class="btn" onclick="forceSync()">SYNC NOW</button>
+<button class="btn" onclick="clearLocal()">CLEAR LOCAL</button>
 
-<select id="input-number">
-<option value="">-Chọn-</option>
-<option>A</option>
-<option>B</option>
-<option>C</option>
-</select>
+</div>
 
-<button onclick="saveData()">LƯU</button>
-
-<div id="thongtin"></div>
+<div id="alert" class="alert"></div>
 
 <script>
 
-/* ===========================
-   🔴 DÁN URL GAS Ở ĐÂY
-===========================*/
-const GAS_URL =
-"https://script.google.com/macros/s/PASTE_URL_CUA_BAN/exec";
+/* =========================
+   ⚠️ THAY LINK WEB APP
+========================= */
 
-/* =========================== */
+const API_URL="PASTE_WEBAPP_URL_HERE";
 
-const scannedQRs = new Set();
-let scanCount = 0;
+/* =========================
+   LOCAL DATABASE
+========================= */
 
-function formatTime(){
-  const d=new Date();
-  return d.toLocaleString("vi-VN");
-}
+let queue=JSON.parse(localStorage.getItem("qr_queue")||"[]");
+let scanned=new Set(queue.map(x=>x.qr));
+
+updateCounter();
+
+/* =========================
+   SCAN ENGINE (FAST MODE)
+========================= */
 
 function onScanSuccess(text){
 
-  if(scannedQRs.has(text)) return;
+text=text.trim();
 
-  scannedQRs.add(text);
-  scanCount++;
-
-  const div=document.getElementById("thongtin");
-
-  div.innerHTML += `
-  <div>
-    ${formatTime()} - ${text}
-  </div>`;
+if(scanned.has(text)){
+show("⚠️ Trùng");
+return;
 }
 
-const scanner =
-new Html5QrcodeScanner(
+const item={
+time:new Date().toLocaleString("vi-VN"),
+qr:text,
+synced:false
+};
+
+queue.push(item);
+scanned.add(text);
+
+saveLocal();
+updateCounter();
+
+show("✅ "+text);
+
+}
+
+/* =========================
+   CAMERA
+========================= */
+
+const scanner=new Html5QrcodeScanner(
 "qr-reader",
-{ fps:10, qrbox:250 }
+{fps:15,qrbox:{width:250,height:250}}
 );
 
 scanner.render(onScanSuccess);
 
-/* ===========================
-   SAVE TO GAS
-===========================*/
-function saveData(){
+/* =========================
+   LOCAL STORAGE
+========================= */
 
-  const number =
-    document.getElementById("input-number").value;
+function saveLocal(){
+localStorage.setItem("qr_queue",JSON.stringify(queue));
+}
 
-  if(scannedQRs.size===0){
-    alert("Chưa có QR");
-    return;
-  }
+function updateCounter(){
+document.getElementById("count").innerText=queue.length;
+}
 
-  const values =
-    Array.from(scannedQRs).map(qr=>({
-      time:formatTime(),
-      qr:qr
-    }));
+/* =========================
+   AUTO SYNC ENGINE
+========================= */
 
-  fetch(GAS_URL,{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json"
-    },
-    body:JSON.stringify({
-      values:values,
-      number:number
-    })
-  })
-  .then(r=>r.json())
-  .then(()=>{
-      alert("Đã lưu");
+async function sync(){
 
-      scannedQRs.clear();
-      document.getElementById("thongtin").innerHTML="";
-  });
+const unsynced=queue.filter(x=>!x.synced);
+
+if(!unsynced.length) return;
+
+try{
+
+await fetch(API_URL,{
+method:"POST",
+body:JSON.stringify({
+action:"save",
+data:unsynced
+})
+});
+
+queue.forEach(x=>x.synced=true);
+saveLocal();
+
+show("☁️ Synced");
+
+}catch(e){
+console.log("offline...");
+}
+
+}
+
+/* auto sync mỗi 10s */
+setInterval(sync,10000);
+
+/* =========================
+   MANUAL SYNC
+========================= */
+
+function forceSync(){
+sync();
+}
+
+/* =========================
+   CLEAR
+========================= */
+
+function clearLocal(){
+if(confirm("Xóa dữ liệu local?")){
+queue=[];
+scanned.clear();
+saveLocal();
+updateCounter();
+}
+}
+
+/* =========================
+   ALERT
+========================= */
+
+function show(msg){
+const el=document.getElementById("alert");
+el.innerText=msg;
+el.style.display="block";
+setTimeout(()=>el.style.display="none",1200);
 }
 
 </script>
