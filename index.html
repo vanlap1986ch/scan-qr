@@ -1,310 +1,88 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
     <style>
-        body { font-family: Arial; background: #f3f4f6; margin: 0; text-align: center; }
-        #qr-reader { width: 320px; margin: auto; }
-        .box { padding: 20px }
-        .counter { font-size: 22px; font-weight: bold; margin-bottom: 10px; }
-        .btn { padding: 10px 15px; margin: 5px; border: none; background: #111827; color: white; border-radius: 6px; cursor: pointer; }
-        .alert { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #111827; color: #fff; padding: 15px 25px; border-radius: 8px; display: none; z-index: 999; }
-        #login-screen { padding: 50px; }
-        input { padding: 10px; margin: 5px; width: 80%; max-width: 300px; border-radius: 4px; border: 1px solid #ccc; }
-    
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Poppins', sans-serif;
-}
-
-body {
-    background: url("https://i.pinimg.com/736x/fe/56/1f/fe561fe1fd0a4cac59ae2629293e36db.jpg");
-    background-size: cover;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-    transition: background 0.5s ease; /* Hiệu ứng chuyển cảnh mượt */
-}
-/* Style cho thông báo giữa màn hình */
-.center-alert {
-    display: none;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background-color: rgba(0, 0, 0, 0.85);
-    color: white;
-    padding: 20px 40px;
-    border-radius: 10px;
-    z-index: 9999; /* Luôn nằm trên cùng */
-    font-size: 18px;
-    font-weight: bold;
-    text-align: center;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translate(-50%, -60%); }
-    to { opacity: 1; transform: translate(-50%, -50%); }
-}
-
-/* 1. Cấu hình Ô nhập liệu (Input Field) */
-.input-field {
-    font-size: 15px;
-    background: rgba(255, 255, 255, 0.2); /* Nền mờ trắng */
-    color: #ffffff; /* Chữ mặc định là trắng khi chưa nhập hoặc placeholder */
-    height: 50px;
-    width: 100%;
-    padding: 0 10px 0 45px;
-    border: 2px solid transparent;
-    border-radius: 30px;
-    outline: none;
-    transition: .3s ease;
-}
-
-/* Khi người dùng click vào hoặc đang gõ chữ */
-.input-field:focus, 
-.input-field:not(:placeholder-shown) {
-    background: #ffffff; /* Nền chuyển sang trắng hoàn toàn để dễ nhìn */
-    color: #003366;      /* CHỮ MÀU XANH ĐẬM khi nhập liệu */
-    border-color: #007bff;
-}
-
-/* Đảm bảo icon bên trong input đổi màu khi nền trắng */
-.input-box:focus-within i {
-    color: #003366;
-}
-
-/* 2. Cấu hình Nút Sign In */
-.submit {
-    font-size: 16px;
-    font-weight: 600;
-    color: white;             /* Chữ nút màu trắng */
-    height: 50px;
-    width: 100%;
-    border: none;
-    border-radius: 50px;      /* BO TRÒN hoàn toàn */
-    outline: none;
-    background: #007bff;      /* NỀN MÀU XANH dương */
-    cursor: pointer;
-    transition: .3s ease-in-out;
-    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
-    margin-top: 10px;
-}
-
-.submit:hover {
-    background: #0056b3;      /* Xanh đậm hơn khi di chuột qua */
-    box-shadow: 0 6px 20px rgba(0, 86, 179, 0.4);
-    transform: translateY(-2px); /* Hiệu ứng nổi nhẹ */
-}
-
-/* Placeholder màu trắng mờ */
-::-webkit-input-placeholder {
-    color: rgba(255, 255, 255, 0.8);
-}
-#qr-reader {
-    width: 100%;
-    max-width: 400px; /* Giới hạn độ rộng vừa phải để dễ quét */
-    margin: 0 auto;   /* Căn giữa trong hàng (row) */
-    border: 4px solid #007bff !important; /* Tạo khung màu xanh nổi bật */
-    border-radius: 15px; /* Bo góc cho mượt mà */
-    overflow: hidden;    /* Đảm bảo camera không tràn khỏi góc bo */
-    box-shadow: 0 8px 20px rgba(0,0,0,0.2); /* Đổ bóng cho hiện đại */
-}
-
-/* Tinh chỉnh hàng chứa QR để đảm bảo căn giữa tuyệt đối */
-.row.mb-3 {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-}
-
-/* LỚP MỚI: Dùng khi đăng nhập thành công */
-body.logged-in {
-    background: #f0f2f5 !important; /* Tắt ảnh nền, dùng màu xám dịu */
-}
-
-/* Container chính bao quanh form login */
-.wrapper {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background: rgba(0, 0, 0, 0.5); /* Làm tối nền để nổi bật form */
-}
-
-/* Box đăng nhập */
-.form-box {
-    width: 100%;
-    max-width: 450px;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(15px);
-    padding: 40px;
-    border-radius: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 0 20px rgba(0,0,0,0.2);
-}
-
-.top h1 {
-    color: #fff;
-    font-size: 24px;
-    margin-bottom: 10px;
-    text-align: center;
-}
-
-header {
-    color: #fff;
-    font-size: 30px;
-    font-weight: 600;
-    text-align: center;
-    margin-bottom: 30px;
-}
-
-/* Input Fields */
-.input-box {
-    position: relative;
-    margin-bottom: 20px;
-}
-
-.input-field {
-    width: 100%;
-    height: 50px;
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    border-radius: 25px;
-    padding: 0 20px 0 50px;
-    color: #fff;
-    outline: none;
-}
-
-.input-box i {
-    position: absolute;
-    left: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #fff;
-}
-
-/* GIAO DIỆN SCAN (Mới và Đẹp) */
-.box {
-    padding: 20px;
-    width: 100%;
-    max-width: 600px;
-    margin: 20px auto;
-    background: #fff;
-    border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-}
-
-#qr-reader {
-    border-radius: 10px;
-    overflow: hidden;
-    border: 2px solid #007bff !important;
-}
-
-/* Hàng chứa các nút và input */
-.row {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-    width: 100%;
-}
-
-.button {
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    color: white;
-    font-weight: 600;
-    cursor: pointer;
-    transition: 0.3s;
-    flex: 1; /* Chia đều chiều rộng */
-}
-
-#scan-count { background: #007bff; flex: 3; }
-#toggle-alert-button { background: #6c757d; flex: 1; }
-#import-button { background: #28a745; }
-#add-button { background: #fd7e14; }
-#delete-button { background: #dc3545; }
-
-/* Bảng danh sách quét */
-#thongtin {
-    width: 100%;
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 10px;
-    margin-bottom: 15px;
-    max-height: 250px;
-    overflow-y: auto;
-    border: 1px solid #dee2e6;
-}
-
-#thongtin div {
-    display: flex;
-    align-items: center;
-    padding: 8px;
-    border-bottom: 1px solid #eee;
-    font-size: 14px;
-}
-
-#input-number, #custom-input {
-    padding: 10px;
-    border: 1px solid #ced4da;
-    border-radius: 8px;
-    outline: none;
-}
-
-#input-number { flex: 1; }
-#custom-input { flex: 2; }
-
-</style>
-    
+        /* CSS Cơ bản để giả lập style bạn muốn */
+        body { font-family: 'Poppins', sans-serif; background: #eceff1; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .wrapper { width: 400px; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .top h1 { font-size: 24px; color: #333; margin-bottom: 20px; }
+        .input-box { position: relative; margin-bottom: 20px; }
+        .input-field { width: 100%; padding: 10px 40px 10px 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        .input-box i { position: absolute; right: 15px; top: 12px; color: #777; }
+        .submit { width: 100%; padding: 10px; background: #111827; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+        
+        #scan-section { background: #fff; padding: 20px; border-radius: 12px; display: none; width: 95%; max-width: 500px; text-align: center; }
+        #qr-reader { width: 100% !important; border: none !important; }
+        .button { padding: 8px 15px; margin: 5px; border-radius: 5px; border: none; background: #1e293b; color: #fff; cursor: pointer; }
+        #thongtin { text-align: left; margin-top: 15px; max-height: 200px; overflow-y: auto; border: 1px solid #eee; padding: 10px; }
+        .center-alert { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: #fff; padding: 15px 25px; border-radius: 8px; display: none; z-index: 1000; }
+        .form-select, #custom-input { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+    </style>
 </head>
-    
-
 <body>
 
-    <div id="login-screen">
-        <h2>ĐĂNG NHẬP HỆ THỐNG</h2>
-        <input type="text" id="user-id" placeholder="Nhập ID"><br>
-        <input type="password" id="user-pass" placeholder="Nhập Pass"><br>
-        <button class="btn" onclick="handleLogin()">Đăng nhập</button>
-    </div>
-
-    <div id="main-app" style="display: none;">
-        <div class="box">
-            <div class="counter">Đã quét: <span id="count">0</span></div>
-            <div id="qr-reader"></div>
-            <br>
-            <button class="btn" onclick="forceSync()">☁️ SYNC NOW</button>
-            <button class="btn" onclick="clearLocal()">🗑 CLEAR LOCAL</button>
+    <div class="wrapper" id="login-wrapper">
+        <div class="form-box">
+            <div class="login-container" id="login">
+                <div class="top"><h1>SCAN QR VÁ</h1></div>
+                <div class="input-box">
+                    <input type="text" id="user-id" class="input-field" placeholder="Username or Email">
+                    <i class="bx bx-user"></i>
+                </div>
+                <div class="input-box">
+                    <input type="password" id="user-pass" class="input-field" placeholder="Password">
+                    <i class="bx bx-lock-alt"></i>
+                </div>
+                <div class="input-box">
+                    <input type="button" class="submit" value="Sign In" onclick="handleLogin()">
+                </div>
+            </div>
         </div>
     </div>
 
-    <div id="alert" class="alert"></div>
+    <div id="scan-section">
+        <div class="row mb-3">
+            <button class="button" id="scan-count">Số lượng đã quét: <span id="count">0</span></button>
+        </div>
+        
+        <div id="qr-reader"></div>
+        <div id="thongtin"></div>
+
+        <div class="row mt-3">
+            <button id="import-button" class="button" onclick="importToSheets()">Lưu</button>
+            <button id="add-button" class="button" onclick="manualAdd()">Thêm</button>
+            <button id="delete-button" class="button" onclick="deleteSelected()">Xóa QC</button>
+        </div>
+
+        <div class="row">
+            <select class="form-select" id="input-number">
+                <option value="Line 1">Line 1</option>
+                <option value="Line 2">Line 2</option>
+            </select>
+            <input type="text" id="custom-input" placeholder="Nhập mã QR thủ công" />
+        </div>
+        
+        <div id="center-alert" class="center-alert"></div>
+    </div>
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbwQ7yG6AxLf8n9rblCVYfhuMIV5HQGWNk86FcacbYnyvlzwJFGFIBytNWwfteZ2p-qH/exec";
-
-        let queue = JSON.parse(localStorage.getItem("qr_queue") || "[]");
-        let scanned = new Set(queue.map(x => x.qr));
-        updateCounter();
+        const scannedQRs = new Set();
+        let scanCount = 0;
+        let isScanningEnabled = true;
 
         /* XỬ LÝ ĐĂNG NHẬP */
         async function handleLogin() {
             const id = document.getElementById("user-id").value;
             const pass = document.getElementById("user-pass").value;
-            if(!id || !pass) return show("⚠️ Vui lòng nhập đủ tin");
 
-            show("🔑 Đang kiểm tra...");
+            showCenterAlert("🔑 Đang kiểm tra...");
             try {
-                // Không dùng no-cors ở đây để nhận được phản hồi success/fail
                 const res = await fetch(API_URL, {
                     method: "POST",
                     body: JSON.stringify({ action: "login", email: id, password: pass })
@@ -312,79 +90,105 @@ header {
                 const result = await res.json();
 
                 if (result.status === "success") {
-                    document.getElementById("login-screen").style.display = "none";
-                    document.getElementById("main-app").style.display = "block";
-                    show("✅ Chào " + id);
-                    startScanner(); // Chỉ khởi động camera sau khi đăng nhập
+                    document.getElementById('login-wrapper').style.display = 'none';
+                    document.getElementById('scan-section').style.display = 'block';
+                    startScanner();
+                    showCenterAlert("✅ Đăng nhập thành công!");
                 } else {
-                    show("❌ " + (result.message || "Sai ID/Pass"));
+                    showCenterAlert("❌ " + (result.message || "Sai ID/Pass"));
                 }
             } catch (e) {
-                show("📡 Lỗi kết nối Server");
+                showCenterAlert("📡 Lỗi kết nối Server");
             }
         }
 
-        /* KHỞI ĐỘNG CAMERA */
+        /* KHỞI TẠO CAMERA */
         function startScanner() {
-            const scanner = new Html5QrcodeScanner("qr-reader", {
-                fps: 15, qrbox: { width: 250, height: 250 }, rememberLastUsedCamera: true
-            });
-            scanner.render(onScanSuccess);
+            const html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 20, qrbox: 250 });
+            html5QrcodeScanner.render(onScanSuccess);
         }
 
-        function onScanSuccess(text) {
-            text = text.trim();
-            if (scanned.has(text)) {
-                show("⚠️ Mã đã quét");
+        function onScanSuccess(decodedText) {
+            if (!isScanningEnabled) return;
+            const text = decodedText.trim();
+
+            if (scannedQRs.has(text)) {
+                showCenterAlert("⚠️ Mã này đã được quét!", 2000);
                 return;
             }
-            const item = { time: new Date().toLocaleString("vi-VN"), qr: text, synced: false };
-            queue.push(item);
-            scanned.add(text);
-            saveLocal();
-            updateCounter();
-            show("✅ " + text);
+
+            const timestamp = new Date().toLocaleString("vi-VN");
+            scannedQRs.add(text);
+            scanCount++;
+            document.getElementById("count").innerText = scanCount;
+
+            const entry = document.createElement("div");
+            entry.innerHTML = `<input type="checkbox" id="check-${text}" data-qr="${text}" data-time="${timestamp}">
+                               <label for="check-${text}">${timestamp} - ${text}</label>`;
+            document.getElementById("thongtin").appendChild(entry);
+
+            showCenterAlert("✅ Đã quét thành công!", 1500);
+
+            isScanningEnabled = false;
+            setTimeout(() => { isScanningEnabled = true; }, 2000);
         }
 
-        function saveLocal() { localStorage.setItem("qr_queue", JSON.stringify(queue)); }
-        function updateCounter() { document.getElementById("count").innerText = queue.length; }
+        /* LƯU VÀO GOOGLE SHEETS */
+        async function importToSheets() {
+            const line = document.getElementById("input-number").value;
+            const checkboxes = Array.from(document.querySelectorAll('#thongtin input[type="checkbox"]'));
+            
+            // Lấy những cái CHƯA chọn (theo logic code cũ của bạn là unchecked)
+            const dataToSave = checkboxes
+                .filter(cb => !cb.checked)
+                .map(cb => ({ time: cb.dataset.time, qr: cb.dataset.qr }));
 
-        /* ĐỒNG BỘ DỮ LIỆU */
-        async function sync() {
-            const unsynced = queue.filter(x => !x.synced);
-            if (!unsynced.length) return;
+            if (dataToSave.length === 0) return showCenterAlert("Không có mã nào để lưu!");
 
+            showCenterAlert("☁️ Đang lưu...");
             try {
-                // Dùng no-cors để gửi dữ liệu nhanh, không bị chặn bởi chính sách bảo mật
                 await fetch(API_URL, {
                     method: "POST",
                     mode: "no-cors",
-                    body: JSON.stringify({ action: "save", line: "Sản xuất - Line 1", items: unsynced })
+                    body: JSON.stringify({ action: "save", line: line, items: dataToSave })
                 });
-
-                queue.forEach(x => x.synced = true);
-                saveLocal();
-                updateCounter();
-                show("✅ Đã lưu vào Sheet");
+                
+                // Xóa danh sách sau khi lưu thành công
+                document.getElementById("thongtin").innerHTML = "";
+                scannedQRs.clear();
+                scanCount = 0;
+                document.getElementById("count").innerText = "0";
+                showCenterAlert("✅ Đã lưu thành công!");
             } catch (e) {
-                show("📡 Chờ kết nối...");
+                showCenterAlert("❌ Lỗi lưu dữ liệu");
             }
         }
 
-        setInterval(sync, 10000);
-        function forceSync() { sync(); }
-        function clearLocal() {
-            if (!confirm("Xóa dữ liệu chưa sync?")) return;
-            queue = []; scanned.clear();
-            saveLocal(); updateCounter();
-            show("🗑 Đã xóa");
+        /* THÊM THỦ CÔNG */
+        function manualAdd() {
+            const val = document.getElementById("custom-input").value.trim().toUpperCase();
+            if(!val) return showCenterAlert("Vui lòng nhập mã!");
+            onScanSuccess(val);
+            document.getElementById("custom-input").value = "";
         }
 
-        function show(msg) {
-            const el = document.getElementById("alert");
-            el.innerText = msg;
-            el.style.display = "block";
-            setTimeout(() => el.style.display = "none", 2000);
+        /* XÓA QC (Xóa những cái đã chọn checkbox) */
+        function deleteSelected() {
+            const selected = document.querySelectorAll('#thongtin input[type="checkbox"]:checked');
+            selected.forEach(cb => {
+                scannedQRs.delete(cb.dataset.qr);
+                cb.parentElement.remove();
+                scanCount--;
+            });
+            document.getElementById("count").innerText = scanCount;
+            showCenterAlert("🗑 Đã xóa mục chọn");
+        }
+
+        function showCenterAlert(message, duration = 3000) {
+            const el = document.getElementById('center-alert');
+            el.textContent = message;
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, duration);
         }
     </script>
 </body>
