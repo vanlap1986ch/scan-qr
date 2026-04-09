@@ -1,268 +1,138 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-
-<style>
-body{
-font-family:Arial;
-background:#f3f4f6;
-margin:0;
-text-align:center;
-}
-
-#qr-reader{
-width:320px;
-margin:auto;
-}
-   
-
-.box{padding:20px}
-
-.counter{
-font-size:22px;
-font-weight:bold;
-margin-bottom:10px;
-}
-
-.btn{
-padding:10px 15px;
-margin:5px;
-border:none;
-background:#111827;
-color:white;
-border-radius:6px;
-cursor:pointer;
-}
-
-.alert{
-position:fixed;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-background:#111827;
-color:#fff;
-padding:15px 25px;
-border-radius:8px;
-display:none;
-z-index:999;
-}
-</style>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        body { font-family: Arial; background: #f3f4f6; margin: 0; text-align: center; }
+        #qr-reader { width: 320px; margin: auto; }
+        .box { padding: 20px }
+        .counter { font-size: 22px; font-weight: bold; margin-bottom: 10px; }
+        .btn { padding: 10px 15px; margin: 5px; border: none; background: #111827; color: white; border-radius: 6px; cursor: pointer; }
+        .alert { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #111827; color: #fff; padding: 15px 25px; border-radius: 8px; display: none; z-index: 999; }
+        #login-screen { padding: 50px; }
+        input { padding: 10px; margin: 5px; width: 80%; max-width: 300px; border-radius: 4px; border: 1px solid #ccc; }
+    </style>
 </head>
 
 <body>
-   <div id="login-screen" style="padding: 50px;">
-  <h2>ĐĂNG NHẬP HỆ THỐNG</h2>
-  <input type="text" id="user-id" placeholder="Nhập ID" style="padding:10px; margin:5px;"><br>
-  <input type="password" id="user-pass" placeholder="Nhập Pass" style="padding:10px; margin:5px;"><br>
-  <button class="btn" onclick="handleLogin()">Đăng nhập</button>
-</div>
 
-<div id="main-app" style="display: none;">
-  </div>
+    <div id="login-screen">
+        <h2>ĐĂNG NHẬP HỆ THỐNG</h2>
+        <input type="text" id="user-id" placeholder="Nhập ID"><br>
+        <input type="password" id="user-pass" placeholder="Nhập Pass"><br>
+        <button class="btn" onclick="handleLogin()">Đăng nhập</button>
+    </div>
 
-<div class="box">
+    <div id="main-app" style="display: none;">
+        <div class="box">
+            <div class="counter">Đã quét: <span id="count">0</span></div>
+            <div id="qr-reader"></div>
+            <br>
+            <button class="btn" onclick="forceSync()">☁️ SYNC NOW</button>
+            <button class="btn" onclick="clearLocal()">🗑 CLEAR LOCAL</button>
+        </div>
+    </div>
 
-<div class="counter">
-Đã quét: <span id="count">0</span>
-</div>
+    <div id="alert" class="alert"></div>
 
-<div id="qr-reader"></div>
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbwQ7yG6AxLf8n9rblCVYfhuMIV5HQGWNk86FcacbYnyvlzwJFGFIBytNWwfteZ2p-qH/exec";
 
-<br>
+        let queue = JSON.parse(localStorage.getItem("qr_queue") || "[]");
+        let scanned = new Set(queue.map(x => x.qr));
+        updateCounter();
 
-<button class="btn" onclick="forceSync()">☁️ SYNC NOW</button>
-<button class="btn" onclick="clearLocal()">🗑 CLEAR LOCAL</button>
+        /* XỬ LÝ ĐĂNG NHẬP */
+        async function handleLogin() {
+            const id = document.getElementById("user-id").value;
+            const pass = document.getElementById("user-pass").value;
+            if(!id || !pass) return show("⚠️ Vui lòng nhập đủ tin");
 
-</div>
+            show("🔑 Đang kiểm tra...");
+            try {
+                // Không dùng no-cors ở đây để nhận được phản hồi success/fail
+                const res = await fetch(API_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ action: "login", email: id, password: pass })
+                });
+                const result = await res.json();
 
-<div id="alert" class="alert"></div>
+                if (result.status === "success") {
+                    document.getElementById("login-screen").style.display = "none";
+                    document.getElementById("main-app").style.display = "block";
+                    show("✅ Chào " + id);
+                    startScanner(); // Chỉ khởi động camera sau khi đăng nhập
+                } else {
+                    show("❌ " + (result.message || "Sai ID/Pass"));
+                }
+            } catch (e) {
+                show("📡 Lỗi kết nối Server");
+            }
+        }
 
-<script>
+        /* KHỞI ĐỘNG CAMERA */
+        function startScanner() {
+            const scanner = new Html5QrcodeScanner("qr-reader", {
+                fps: 15, qrbox: { width: 250, height: 250 }, rememberLastUsedCamera: true
+            });
+            scanner.render(onScanSuccess);
+        }
 
-/* =========================
-   ✅ THAY WEB APP URL
-========================= */
+        function onScanSuccess(text) {
+            text = text.trim();
+            if (scanned.has(text)) {
+                show("⚠️ Mã đã quét");
+                return;
+            }
+            const item = { time: new Date().toLocaleString("vi-VN"), qr: text, synced: false };
+            queue.push(item);
+            scanned.add(text);
+            saveLocal();
+            updateCounter();
+            show("✅ " + text);
+        }
 
-const API_URL =
-"https://script.google.com/macros/s/AKfycbwQ7yG6AxLf8n9rblCVYfhuMIV5HQGWNk86FcacbYnyvlzwJFGFIBytNWwfteZ2p-qH/exec";
+        function saveLocal() { localStorage.setItem("qr_queue", JSON.stringify(queue)); }
+        function updateCounter() { document.getElementById("count").innerText = queue.length; }
 
-/* =========================
-   LOCAL DATABASE
-========================= */
+        /* ĐỒNG BỘ DỮ LIỆU */
+        async function sync() {
+            const unsynced = queue.filter(x => !x.synced);
+            if (!unsynced.length) return;
 
-let queue = JSON.parse(localStorage.getItem("qr_queue") || "[]");
-let scanned = new Set(queue.map(x => x.qr));
+            try {
+                // Dùng no-cors để gửi dữ liệu nhanh, không bị chặn bởi chính sách bảo mật
+                await fetch(API_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    body: JSON.stringify({ action: "save", line: "Sản xuất - Line 1", items: unsynced })
+                });
 
-updateCounter();
+                queue.forEach(x => x.synced = true);
+                saveLocal();
+                updateCounter();
+                show("✅ Đã lưu vào Sheet");
+            } catch (e) {
+                show("📡 Chờ kết nối...");
+            }
+        }
 
-/* =========================
-   SCAN SUCCESS
-========================= */
-   async function handleLogin() {
-  const id = document.getElementById("user-id").value;
-  const pass = document.getElementById("user-pass").value;
+        setInterval(sync, 10000);
+        function forceSync() { sync(); }
+        function clearLocal() {
+            if (!confirm("Xóa dữ liệu chưa sync?")) return;
+            queue = []; scanned.clear();
+            saveLocal(); updateCounter();
+            show("🗑 Đã xóa");
+        }
 
-  show("🔑 Đang kiểm tra...");
-
-  try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      // Lưu ý: Gửi request POST đến GAS
-      body: JSON.stringify({
-        action: "login",
-        email: id,
-        password: pass
-      })
-    });
-
-    // Vì dùng Web App, bạn có thể nhận kết quả JSON nếu Deploy đúng
-    const result = await res.json(); 
-
-    if (result.status === "success") {
-      document.getElementById("login-screen").style.display = "none";
-      document.getElementById("main-app").style.display = "block";
-      show("✅ Đăng nhập thành công");
-    } else {
-      show("❌ " + (result.message || "Sai thông tin"));
-    }
-  } catch (e) {
-    show("📡 Lỗi kết nối Server");
-  }
-}
-
-function onScanSuccess(text){
-
-text = text.trim();
-
-if(scanned.has(text)){
-show("⚠️ Mã đã quét");
-return;
-}
-
-const item={
-time:new Date().toLocaleString("vi-VN"),
-qr:text,
-synced:false
-};
-
-queue.push(item);
-scanned.add(text);
-
-saveLocal();
-updateCounter();
-
-show("✅ "+text);
-
-}
-
-/* =========================
-   START CAMERA
-========================= */
-
-const scanner = new Html5QrcodeScanner(
-"qr-reader",
-{
-fps:15,
-qrbox:{width:250,height:250},
-rememberLastUsedCamera:true
-});
-
-scanner.render(onScanSuccess);
-
-/* =========================
-   LOCAL STORAGE
-========================= */
-
-function saveLocal(){
-localStorage.setItem("qr_queue",JSON.stringify(queue));
-}
-
-function updateCounter(){
-document.getElementById("count").innerText = queue.length;
-}
-
-/* =========================
-   SYNC TO GOOGLE SHEET
-========================= */
-
-/* =========================
-   SYNC TO GOOGLE SHEET (Đã sửa để khớp với Code.gs)
-========================= */
-
-async function sync(){
-
-  const unsynced = queue.filter(x => !x.synced);
-
-  if(!unsynced.length) return;
-
-  try {
-    show("☁️ Đang sync...");
-
-    const res = await fetch(API_URL, {
-      method: "POST",
-      mode: "no-cors", // Tránh lỗi CORS khi gọi từ GitHub sang Google
-      headers: {
-        "Content-Type": "text/plain" // Apps Script xử lý tốt nhất với text/plain hoặc no-cors
-      },
-      body: JSON.stringify({
-        action: "save",
-        line: "Sản xuất - Line 1", // Tên dây chuyền bạn muốn lưu vào cột 2
-        items: unsynced           // Phải là 'items' để khớp với biến data.items trong Code.gs
-      })
-    });
-
-    // Lưu ý: Khi dùng mode: "no-cors", chúng ta không đọc được result.status 
-    // nên ta mặc định đánh dấu là đã gửi thành công nếu không có lỗi mạng.
-    queue.forEach(x => x.synced = true);
-    saveLocal();
-    updateCounter();
-
-    show("✅ Đã gửi dữ liệu");
-
-  } catch (e) {
-    console.log(e);
-    show("📡 Lỗi kết nối");
-  }
-}
-
-/* AUTO SYNC 10s */
-setInterval(sync,10000);
-
-/* =========================
-   BUTTONS
-========================= */
-
-function forceSync(){
-sync();
-}
-
-function clearLocal(){
-
-if(!confirm("Xóa toàn bộ dữ liệu local?")) return;
-
-queue=[];
-scanned.clear();
-
-saveLocal();
-updateCounter();
-
-show("🗑 Đã xóa");
-}
-
-/* =========================
-   ALERT
-========================= */
-
-function show(msg){
-const el=document.getElementById("alert");
-el.innerText=msg;
-el.style.display="block";
-setTimeout(()=>el.style.display="none",1500);
-}
-
-</script>
-
+        function show(msg) {
+            const el = document.getElementById("alert");
+            el.innerText = msg;
+            el.style.display = "block";
+            setTimeout(() => el.style.display = "none", 2000);
+        }
+    </script>
 </body>
 </html>
