@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<style>
+body{font-family:Arial;background:#f3f4f6;margin:0}
+#qr-reader{width:320px;margin:auto}
+.box{text-align:center;padding:20px}
+.counter{font-size:22px;font-weight:bold}
+.btn{padding:10px 15px;margin:5px}
+.alert{
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+background:#111827;
+color:#fff;
+padding:15px 25px;
+border-radius:8px;
+display:none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+
+<h2>QR SCANNER PRO</h2>
+
+<div class="counter">
+Đã quét: <span id="count">0</span>
+</div>
+
+<div id="qr-reader"></div>
+
+<br>
+<button class="btn" onclick="forceSync()">SYNC NOW</button>
+<button class="btn" onclick="clearLocal()">CLEAR LOCAL</button>
+
+</div>
+
+<div id="alert" class="alert"></div>
+
+<script>
+
+/* =========================
+   ⚠️ THAY LINK WEB APP
+========================= */
+
+const API_URL="PASTE_WEBAPP_URL_HERE";
+
+/* =========================
+   LOCAL DATABASE
+========================= */
+
+let queue=JSON.parse(localStorage.getItem("qr_queue")||"[]");
+let scanned=new Set(queue.map(x=>x.qr));
+
+updateCounter();
+
+/* =========================
+   SCAN ENGINE (FAST MODE)
+========================= */
+
+function onScanSuccess(text){
+
+text=text.trim();
+
+if(scanned.has(text)){
+show("⚠️ Trùng");
+return;
+}
+
+const item={
+time:new Date().toLocaleString("vi-VN"),
+qr:text,
+synced:false
+};
+
+queue.push(item);
+scanned.add(text);
+
+saveLocal();
+updateCounter();
+
+show("✅ "+text);
+
+}
+
+/* =========================
+   CAMERA
+========================= */
+
+const scanner=new Html5QrcodeScanner(
+"qr-reader",
+{fps:15,qrbox:{width:250,height:250}}
+);
+
+scanner.render(onScanSuccess);
+
+/* =========================
+   LOCAL STORAGE
+========================= */
+
+function saveLocal(){
+localStorage.setItem("qr_queue",JSON.stringify(queue));
+}
+
+function updateCounter(){
+document.getElementById("count").innerText=queue.length;
+}
+
+/* =========================
+   AUTO SYNC ENGINE
+========================= */
+
+async function sync(){
+
+const unsynced=queue.filter(x=>!x.synced);
+
+if(!unsynced.length) return;
+
+try{
+
+await fetch(API_URL,{
+method:"POST",
+body:JSON.stringify({
+action:"save",
+data:unsynced
+})
+});
+
+queue.forEach(x=>x.synced=true);
+saveLocal();
+
+show("☁️ Synced");
+
+}catch(e){
+console.log("offline...");
+}
+
+}
+
+/* auto sync mỗi 10s */
+setInterval(sync,10000);
+
+/* =========================
+   MANUAL SYNC
+========================= */
+
+function forceSync(){
+sync();
+}
+
+/* =========================
+   CLEAR
+========================= */
+
+function clearLocal(){
+if(confirm("Xóa dữ liệu local?")){
+queue=[];
+scanned.clear();
+saveLocal();
+updateCounter();
+}
+}
+
+/* =========================
+   ALERT
+========================= */
+
+function show(msg){
+const el=document.getElementById("alert");
+el.innerText=msg;
+el.style.display="block";
+setTimeout(()=>el.style.display="none",1200);
+}
+
+</script>
+
+</body>
+</html>
