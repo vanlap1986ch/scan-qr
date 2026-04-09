@@ -5,11 +5,36 @@
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <style>
-body{font-family:Arial;background:#f3f4f6;margin:0}
-#qr-reader{width:320px;margin:auto}
-.box{text-align:center;padding:20px}
-.counter{font-size:22px;font-weight:bold}
-.btn{padding:10px 15px;margin:5px}
+body{
+font-family:Arial;
+background:#f3f4f6;
+margin:0;
+text-align:center;
+}
+
+#qr-reader{
+width:320px;
+margin:auto;
+}
+
+.box{padding:20px}
+
+.counter{
+font-size:22px;
+font-weight:bold;
+margin-bottom:10px;
+}
+
+.btn{
+padding:10px 15px;
+margin:5px;
+border:none;
+background:#111827;
+color:white;
+border-radius:6px;
+cursor:pointer;
+}
+
 .alert{
 position:fixed;
 top:50%;
@@ -20,6 +45,7 @@ color:#fff;
 padding:15px 25px;
 border-radius:8px;
 display:none;
+z-index:999;
 }
 </style>
 </head>
@@ -27,6 +53,7 @@ display:none;
 <body>
 
 <div class="box">
+
 <div class="counter">
 Đã quét: <span id="count">0</span>
 </div>
@@ -34,8 +61,9 @@ display:none;
 <div id="qr-reader"></div>
 
 <br>
-<button class="btn" onclick="forceSync()">SYNC NOW</button>
-<button class="btn" onclick="clearLocal()">CLEAR LOCAL</button>
+
+<button class="btn" onclick="forceSync()">☁️ SYNC NOW</button>
+<button class="btn" onclick="clearLocal()">🗑 CLEAR LOCAL</button>
 
 </div>
 
@@ -44,30 +72,31 @@ display:none;
 <script>
 
 /* =========================
-   ⚠️ THAY LINK WEB APP
+   ✅ THAY WEB APP URL
 ========================= */
 
-const API_URL="https://script.google.com/macros/s/AKfycbwQ7yG6AxLf8n9rblCVYfhuMIV5HQGWNk86FcacbYnyvlzwJFGFIBytNWwfteZ2p-qH/exec";
+const API_URL =
+"https://script.google.com/macros/s/AKfycbwQ7yG6AxLf8n9rblCVYfhuMIV5HQGWNk86FcacbYnyvlzwJFGFIBytNWwfteZ2p-qH/exec";
 
 /* =========================
    LOCAL DATABASE
 ========================= */
 
-let queue=JSON.parse(localStorage.getItem("qr_queue")||"[]");
-let scanned=new Set(queue.map(x=>x.qr));
+let queue = JSON.parse(localStorage.getItem("qr_queue") || "[]");
+let scanned = new Set(queue.map(x => x.qr));
 
 updateCounter();
 
 /* =========================
-   SCAN ENGINE (FAST MODE)
+   SCAN SUCCESS
 ========================= */
 
 function onScanSuccess(text){
 
-text=text.trim();
+text = text.trim();
 
 if(scanned.has(text)){
-show("⚠️ Trùng");
+show("⚠️ Mã đã quét");
 return;
 }
 
@@ -88,13 +117,16 @@ show("✅ "+text);
 }
 
 /* =========================
-   CAMERA
+   START CAMERA
 ========================= */
 
-const scanner=new Html5QrcodeScanner(
+const scanner = new Html5QrcodeScanner(
 "qr-reader",
-{fps:15,qrbox:{width:250,height:250}}
-);
+{
+fps:15,
+qrbox:{width:250,height:250},
+rememberLastUsedCamera:true
+});
 
 scanner.render(onScanSuccess);
 
@@ -107,62 +139,76 @@ localStorage.setItem("qr_queue",JSON.stringify(queue));
 }
 
 function updateCounter(){
-document.getElementById("count").innerText=queue.length;
+document.getElementById("count").innerText = queue.length;
 }
 
 /* =========================
-   AUTO SYNC ENGINE
+   SYNC TO GOOGLE SHEET
 ========================= */
 
 async function sync(){
 
-const unsynced=queue.filter(x=>!x.synced);
+const unsynced = queue.filter(x=>!x.synced);
 
 if(!unsynced.length) return;
 
 try{
 
-await fetch(API_URL,{
+show("☁️ Đang sync...");
+
+const res = await fetch(API_URL,{
 method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
 body:JSON.stringify({
 action:"save",
 data:unsynced
 })
 });
 
+const result = await res.json();
+
+if(result.status==="success"){
+
 queue.forEach(x=>x.synced=true);
 saveLocal();
 
-show("☁️ Synced");
+show("✅ Sync thành công");
+
+}else{
+show("❌ Sheet từ chối");
+}
 
 }catch(e){
-console.log("offline...");
+console.log(e);
+show("📡 Offline");
 }
 
 }
 
-/* auto sync mỗi 10s */
+/* AUTO SYNC 10s */
 setInterval(sync,10000);
 
 /* =========================
-   MANUAL SYNC
+   BUTTONS
 ========================= */
 
 function forceSync(){
 sync();
 }
 
-/* =========================
-   CLEAR
-========================= */
-
 function clearLocal(){
-if(confirm("Xóa dữ liệu local?")){
+
+if(!confirm("Xóa toàn bộ dữ liệu local?")) return;
+
 queue=[];
 scanned.clear();
+
 saveLocal();
 updateCounter();
-}
+
+show("🗑 Đã xóa");
 }
 
 /* =========================
@@ -173,7 +219,7 @@ function show(msg){
 const el=document.getElementById("alert");
 el.innerText=msg;
 el.style.display="block";
-setTimeout(()=>el.style.display="none",1200);
+setTimeout(()=>el.style.display="none",1500);
 }
 
 </script>
