@@ -52,6 +52,15 @@ z-index:999;
 </head>
 
 <body>
+   <div id="login-screen" style="padding: 50px;">
+  <h2>ĐĂNG NHẬP HỆ THỐNG</h2>
+  <input type="text" id="user-id" placeholder="Nhập ID" style="padding:10px; margin:5px;"><br>
+  <input type="password" id="user-pass" placeholder="Nhập Pass" style="padding:10px; margin:5px;"><br>
+  <button class="btn" onclick="handleLogin()">Đăng nhập</button>
+</div>
+
+<div id="main-app" style="display: none;">
+  </div>
 
 <div class="box">
 
@@ -91,6 +100,37 @@ updateCounter();
 /* =========================
    SCAN SUCCESS
 ========================= */
+   async function handleLogin() {
+  const id = document.getElementById("user-id").value;
+  const pass = document.getElementById("user-pass").value;
+
+  show("🔑 Đang kiểm tra...");
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      // Lưu ý: Gửi request POST đến GAS
+      body: JSON.stringify({
+        action: "login",
+        email: id,
+        password: pass
+      })
+    });
+
+    // Vì dùng Web App, bạn có thể nhận kết quả JSON nếu Deploy đúng
+    const result = await res.json(); 
+
+    if (result.status === "success") {
+      document.getElementById("login-screen").style.display = "none";
+      document.getElementById("main-app").style.display = "block";
+      show("✅ Đăng nhập thành công");
+    } else {
+      show("❌ " + (result.message || "Sai thông tin"));
+    }
+  } catch (e) {
+    show("📡 Lỗi kết nối Server");
+  }
+}
 
 function onScanSuccess(text){
 
