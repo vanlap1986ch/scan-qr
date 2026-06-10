@@ -266,7 +266,7 @@ header {
     <div class="wrapper" id="login-wrapper">
         <div class="form-box">
             <div class="login-container" id="login">
-                <div class="top"><h1>SCAN QR VÁ</h1></div>
+                <div class="top"><h1>SCAN KIỂM KÊ</h1></div>
                 <div class="input-box">
                     <input type="text" id="user-id" class="input-field" placeholder="Username or Email">
                     <i class="bx bx-user"></i>
@@ -341,7 +341,7 @@ header {
 
         /* KHỞI TẠO CAMERA */
         function startScanner() {
-            const html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 20, qrbox: 250 });
+            const html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 30, qrbox: 250 });
             html5QrcodeScanner.render(onScanSuccess);
         }
 
